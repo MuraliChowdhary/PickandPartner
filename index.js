@@ -34,7 +34,7 @@ app.post('/shorten', async (req, res) => {
   const newUrl = new Url({ shortId, originalUrl });
   await newUrl.save();
 
-  res.json({ shortUrl: `http://localhost:3004/${shortId}` });
+  res.json({ shortUrl: `https://pickandpartner.onrender.com/${shortId}` });
 });
 
 // Route to handle redirects and track unique clicks
