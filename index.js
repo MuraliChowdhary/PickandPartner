@@ -47,31 +47,28 @@ app.post('/shorten', async (req, res) => {
 });
 
 // Route to handle redirects and track unique clicks
-app.post('/:shortId/click', async (req, res) => {
-  const { shortId } = req.params;
-  const { visitorId } = req.body; 
-   
-  const urlRecord = await Url.findOne({ shortId });
-
-//   const res1 = await Url.find({})
-//   //console.log(res1)
-
-
-  if (urlRecord) {
-    // Check if the visitorId already exists in the visitorIds array
-    if (!urlRecord.visitorIds.includes(visitorId)) {
-      // If visitorId is unique, increment the click count and add the visitorId
-      urlRecord.clickCount += 1;
-      urlRecord.visitorIds.push(visitorId);
-      await urlRecord.save();
+   app.get('/:shortId/click', async (req, res) => {
+    const { shortId } = req.params;
+    const visitorId = req.query.visitorId; // Extract visitorId from query parameters
+     
+    const urlRecord = await Url.findOne({ shortId });
+  
+    if (urlRecord) {
+      // Check if the visitorId already exists in the visitorIds array
+      if (!urlRecord.visitorIds.includes(visitorId)) {
+        // If visitorId is unique, increment the click count and add the visitorId
+        urlRecord.clickCount += 1;
+        urlRecord.visitorIds.push(visitorId);
+        await urlRecord.save();
+      }
+  
+      // Respond with the original URL for redirection
+      res.json({ redirectUrl: urlRecord.originalUrl });
+    } else {
+      res.status(404).json({ message: 'URL not found' });
     }
-
-    // Respond with the original URL for redirection
-    res.json({ redirectUrl: urlRecord.originalUrl });
-  } else {
-    res.status(404).json({ message: 'URL not found' });
-  }
-});
+  });
+  
 
 // Start the server
 const PORT = 3004;
