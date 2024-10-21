@@ -66,7 +66,8 @@ app.post('/shorten', async (req, res) => {
       }
   
       // Respond with the original URL for redirection
-      res.json(urlRecord.originalUrl );
+    //   res.json(urlRecord.originalUrl );
+       res.redirect(url.longUrl);
     } else {
       res.status(404).json({ message: 'URL not found' });
     }
