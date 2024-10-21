@@ -8,15 +8,15 @@ const app = express();
 
 
  
-const corsOptions = {
-    origin: '*', // Allow all origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allow specific HTTP methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
-    credentials: true, // Allow credentials (cookies, authorization headers)
-  };
+// const corsOptions = {
+//     origin: '*', // Allow all origins
+//     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allow specific HTTP methods
+//     allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
+//     credentials: true, // Allow credentials (cookies, authorization headers)
+//   };
   
   // Use the CORS middleware with the defined options
-  app.use(cors(corsOptions));
+  app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB
@@ -50,7 +50,7 @@ app.post('/shorten', async (req, res) => {
 });
 
 // Route to handle redirects and track unique clicks
-   app.get('/:shortId/click', async (req, res) => {
+   app.get('/:shortId', async (req, res) => {
     const { shortId } = req.params;
     const visitorId = req.query.visitorId; // Extract visitorId from query parameters
      
@@ -76,5 +76,5 @@ app.post('/shorten', async (req, res) => {
 // Start the server
 const PORT = 3004;
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on ${PORT}`);
 });
