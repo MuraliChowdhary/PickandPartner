@@ -57,7 +57,7 @@ app.get('/:shortId', async (req, res) => {
 
   if (urlRecord) {
       // Construct the temporary redirect URL with the shortId as a query parameter
-      const redirectUrl = `https://testing1-pearl-alpha.vercel.app/?shortId=${shortId}`;
+      const redirectUrl = `https://testing1-hmvudqqg9-sudireddy-muralis-projects.vercel.app/?shortId=${shortId}`;
 
       // Redirect the user to the temporary URL
       res.redirect(redirectUrl);
