@@ -28,12 +28,12 @@ mongoose.connect(process.env.MONGO_URL, {
 .catch((err)=>console.log(err))
 
 // Create URL schema with an array to store visitor IDs
-const urlSchema = new mongoose.Schema({
-  shortId: String,
-  originalUrl: String,
-  clickCount: { type: Number, default: 0 },
-  visitorIds: [String], // Store visitor IDs to track unique clicks
-});
+    const urlSchema = new mongoose.Schema({
+    shortId: String,
+    originalUrl: String,
+    clickCount: { type: Number, default: 0 },
+    visitorIds: [String], 
+    });
 
 const Url = mongoose.model('Url', urlSchema);
 
@@ -49,30 +49,46 @@ app.post('/shorten', async (req, res) => {
   res.json({ shortUrl: `https://pickandpartner.onrender.com/${shortId}` });
 });
 
-// Route to handle redirects and track unique clicks
-   app.get('/:shortId', async (req, res) => {
-    const { shortId } = req.params;
-    const visitorId = req.query.visitorId; // Extract visitorId from query parameters
-     
-    const urlRecord = await Url.findOne({ shortId });
+app.get('/:shortId', async (req, res) => {
+  const { shortId } = req.params;
+
+  // Fetch the URL record using the short ID
+  const urlRecord = await Url.findOne({ shortId });
+
+  if (urlRecord) {
+      // Construct the temporary redirect URL with the shortId as a query parameter
+      const redirectUrl = `https://testing1-pearl-alpha.vercel.app/?shortId=${shortId}`;
+
+      // Redirect the user to the temporary URL
+      res.redirect(redirectUrl);
+  } else {
+      res.status(404).json({ message: 'URL not found' });
+  }
+});
+
   
-    if (urlRecord) {
+app.post('/store-visitor-id', async (req, res) => {
+  const { visitorId, shortId } = req.body;
+
+  // Find the corresponding URL record
+  const urlRecord = await Url.findOne({ shortId });
+
+  if (urlRecord) {
       // Check if the visitorId already exists in the visitorIds array
       if (!urlRecord.visitorIds.includes(visitorId)) {
-        // If visitorId is unique, increment the click count and add the visitorId
-        urlRecord.clickCount += 1;
-        urlRecord.visitorIds.push(visitorId);
-        await urlRecord.save();
+          // If visitorId is unique, increment the click count and add the visitorId
+          urlRecord.clickCount += 1;
+          urlRecord.visitorIds.push(visitorId);
+          await urlRecord.save();
       }
-  
-      // Respond with the original URL for redirection
-    //   res.json(urlRecord.originalUrl );
-       res.redirect(urlRecord.originalUrl);
-    } else {
+      
+      // Return the original URL to redirect
+      res.json({ originalUrl: urlRecord.originalUrl });
+  } else {
       res.status(404).json({ message: 'URL not found' });
-    }
-  });
-  
+  }
+});
+
 
 // Start the server
 const PORT = 3004;
