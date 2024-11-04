@@ -1,22 +1,12 @@
-require("dotenv").config()
+require("dotenv").config();
 const express = require('express');
 const mongoose = require('mongoose');
 const shortid = require('shortid');
-const cors = require("cors")
+const cors = require("cors");
+
 // Set up Express
 const app = express();
-
-
- 
-// const corsOptions = {
-//     origin: '*', // Allow all origins
-//     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allow specific HTTP methods
-//     allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
-//     credentials: true, // Allow credentials (cookies, authorization headers)
-//   };
-  
-  // Use the CORS middleware with the defined options
-  app.use(cors());
+app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB
@@ -24,16 +14,20 @@ mongoose.connect(process.env.MONGO_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(()=>console.log("Connected to db"))
-.catch((err)=>console.log(err))
+.then(() => console.log("Connected to db"))
+.catch((err) => console.log(err));
 
-// Create URL schema with an array to store visitor IDs
-    const urlSchema = new mongoose.Schema({
-    shortId: String,
-    originalUrl: String,
-    clickCount: { type: Number, default: 0 },
-    visitorIds: [String], 
-    });
+// Create URL schema with additional fields for click counts and visitor details
+const urlSchema = new mongoose.Schema({
+  shortId: String,
+  originalUrl: String,
+  totalClicks: { type: Number, default: 0 },     // Total clicks
+  uniqueClicks: { type: Number, default: 0 },    // Unique visitor clicks
+  visitorDetails: [{                             // Array to store visitor details
+    visitorId: String,
+    city: String,
+  }]
+});
 
 const Url = mongoose.model('Url', urlSchema);
 
@@ -49,6 +43,7 @@ app.post('/shorten', async (req, res) => {
   res.json({ shortUrl: `https://pickandpartner.onrender.com/${shortId}` });
 });
 
+// Route to handle redirection
 app.get('/:shortId', async (req, res) => {
   const { shortId } = req.params;
 
@@ -57,7 +52,7 @@ app.get('/:shortId', async (req, res) => {
 
   if (urlRecord) {
       // Construct the temporary redirect URL with the shortId as a query parameter
-      const redirectUrl = `https://testing1-puce.vercel.app/?shortId=${shortId}`;
+      const redirectUrl = `https://finger-print-clicks.vercel.app/?shortId=${shortId}`;
 
       // Redirect the user to the temporary URL
       res.redirect(redirectUrl);
@@ -66,29 +61,35 @@ app.get('/:shortId', async (req, res) => {
   }
 });
 
-  
+// Route to store visitor ID and city information
 app.post('/store-visitor-id', async (req, res) => {
-  const { visitorId, shortId } = req.body;
+  const { visitorId, shortId, city } = req.body;
 
   // Find the corresponding URL record
   const urlRecord = await Url.findOne({ shortId });
 
   if (urlRecord) {
-      // Check if the visitorId already exists in the visitorIds array
-      if (!urlRecord.visitorIds.includes(visitorId)) {
-          // If visitorId is unique, increment the click count and add the visitorId
-          urlRecord.clickCount += 1;
-          urlRecord.visitorIds.push(visitorId);
-          await urlRecord.save();
+      // Increment totalClicks for every visit
+      urlRecord.totalClicks += 1;
+
+      // Check if the visitor is unique
+      const isUniqueVisitor = !urlRecord.visitorDetails.some(visitor => visitor.visitorId === visitorId);
+      
+      if (isUniqueVisitor) {
+          // If visitor is unique, increment uniqueClicks and add visitor details
+          urlRecord.uniqueClicks += 1;
+          urlRecord.visitorDetails.push({ visitorId, city });
       }
       
+      // Save the updated record
+      await urlRecord.save();
+
       // Return the original URL to redirect
       res.json({ originalUrl: urlRecord.originalUrl });
   } else {
       res.status(404).json({ message: 'URL not found' });
   }
 });
-
 
 // Start the server
 const PORT = 3004;
