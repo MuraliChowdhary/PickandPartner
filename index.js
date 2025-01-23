@@ -171,7 +171,7 @@ app.post("/shorten", async (req, res) => {
   await newUrl.save();
 
   res.json({
-    shortUrl: `https://pickandpartner-8nes.onrender.com /${shortId}`,
+    shortUrl: `https://pickandpartner-8nes.onrender.com/${shortId}`,
   });
 });
 
