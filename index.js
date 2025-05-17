@@ -53,7 +53,7 @@ app.post("/shorten", async (req, res) => {
   await newUrl.save();
 
   res.json({
-    shortUrl: `http://locahost:3004/${shortId}`,
+    shortUrl: `https://pickandpartner-94sz.onrender.com/${shortId}`,
   });
 });
 
