@@ -43,6 +43,24 @@ app.get("/heath", async (req, res) => {
   res.send("Server is running");
 });
 
+// Route to get all info
+app.get("/get-info", async (req, res) => {
+  try{
+    const urlData = await Url.find({});
+    if(urlData){
+      res.json({
+        success : true,
+        urlData
+      })
+    }
+    else res.json({success:false})
+  }
+  catch(e){
+    res.status(404).json({message : "Error occured : No data found"})
+  }
+  
+});
+
 // Route to create a short URL
 app.post("/shorten", async (req, res) => {
   const { originalUrl } = req.body;
@@ -88,6 +106,8 @@ app.post("/store-visitor-id", async (req, res) => {
     res.status(404).json({ message: "URL not found" });
   }
 });
+
+
 
 // Start the server
 const PORT = 3004;
