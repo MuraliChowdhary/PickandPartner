@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const shortid = require("shortid");
 const cors = require("cors");
+const bcrypt = require("bcrypt");
 
 // Set up Express
 const app = express();
@@ -60,6 +61,19 @@ app.get("/get-info", async (req, res) => {
   }
   
 });
+
+// hash a word using bcrypt
+app.get("/hash/:word", async (req, res) => {
+  const { word } = req.params;
+  const saltRounds = 10;
+  try {
+    const hashedWord = await bcrypt.hash(word, saltRounds);
+    res.json({ hashedWord });
+  } catch (error) {
+    res.status(500).json({ error: "Error hashing the word" });
+  }
+});
+
 
 // Route to create a short URL
 app.post("/shorten", async (req, res) => {
