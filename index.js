@@ -62,17 +62,19 @@ app.get("/get-info", async (req, res) => {
   
 });
 
-// hash a word using bcrypt
-app.get("/hash/:word", async (req, res) => {
-  const { word } = req.params;
-  const saltRounds = 10;
+
+
+// Route to verify a hashed word
+app.get("/compare/:word/:hash", async (req, res) => {
+  const { word, hash } = req.params;
   try {
-    const hashedWord = await bcrypt.hash(word, saltRounds);
-    res.json({ hashedWord });
+    const isMatch = await bcrypt.compare(word, hash);
+    res.json({ success : isMatch });
   } catch (error) {
-    res.status(500).json({ error: "Error hashing the word" });
+    res.status(500).json({ error: "Error comparing the word" });
   }
-});
+}
+);
 
 
 // Route to create a short URL
