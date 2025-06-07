@@ -5,7 +5,9 @@ const mongoose = require("mongoose");
 const shortid = require("shortid");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
-
+const User = require("./models/user.schema"); // Assuming you have a user schema defined in this path
+const jwt = require("jsonwebtoken");
+const {userMiddleware} = require("./middleware"); // Assuming you have a middleware for user authentication
 // Set up Express
 const app = express();
 app.use(cors());
@@ -43,6 +45,8 @@ const Url = mongoose.model("Url", urlSchema);
 app.get("/heath", async (req, res) => {
   res.send("Server is running");
 });
+
+
 
 // Route to get all info
 app.get("/get-info", async (req, res) => {
@@ -91,20 +95,6 @@ app.post("/shorten", async (req, res) => {
   });
 });
 
-// Route to handle redirection
-app.get("/:shortId", async (req, res) => {
-  const { shortId } = req.params;
-  const urlRecord = await Url.findOne({ shortId });
-
-  if (urlRecord) {
-    // Include originalUrl in the redirect to frontend
-    const redirectUrl = `https://finger-print-clicks.vercel.app/?shortId=${shortId}&originalUrl=${encodeURIComponent(urlRecord.originalUrl)}`;
-    res.redirect(redirectUrl);
-  } else {
-    res.status(404).json({ message: "URL not found" });
-  }
-});
-
 // Route to store visitor ID and city information
 app.post("/store-visitor-id", async (req, res) => {
   const { visitorId, shortId, city } = req.body;
@@ -123,7 +113,123 @@ app.post("/store-visitor-id", async (req, res) => {
   }
 });
 
+// signup
+app.post("/signup", async (req, res) => {
+  const { user } = req.body;
+  try {
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const newUser = new User({...user, password: hashedPassword });
+    await newUser.save();
 
+    res.json({ success: true, message: "User signed up successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Error signing up user" });
+  }
+});
+// login
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    // Add validation for required fields
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
+    }
+
+    // Explicitly select the password field since it has select: false in schema
+    const user = await User.findOne({ email }).select('+password');
+    
+    if (user) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: "Invalid email or password" });
+      }
+      // If the password matches, return jwt
+      const token = jwt.sign({ userId: user._id }, process.env.JWT_USER_SECRET, { expiresIn: '1h' });
+
+      res.json({ success: isMatch, token, message: "User logged in successfully" });
+    } else {
+      res.status(401).json({ success: false, message: "Invalid email or password" });
+    }
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ success: false, message: "Error logging in user" });
+  }
+});
+
+// get user info route 
+app.get("/profile", userMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error("Error in protected route:", error);
+    res.status(500).json({ success: false, message: "Error accessing protected route" });
+  }
+});
+
+// Route to update user profile
+app.put("/profile", userMiddleware, async (req, res) => {
+  const { user } = req.body;
+  try {
+    // Find the user by ID and update their profile
+    const updatedUser = await User.findByIdAndUpdate(req.userId, user, { new: true });
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ success: false, message: "Error updating profile" });
+  }
+});
+
+// send all creator details
+app.get("/all-creators", async (req, res) => {
+  try {
+    const creators = await User.find({});
+    if (creators.length > 0) {
+      res.json({ success: true, creators });
+    } else {
+      res.json({ success: false, message: "No creators found" });
+    }
+  } catch (error) {
+    console.error("Error fetching creators:", error);
+    res.status(500).json({ success: false, message: "Error fetching creators" });
+  }
+});
+
+app.get('/creators/:creatorId', async (req, res) => {
+  const { creatorId } = req.params;
+  try {
+    const creator = await User.findById(creatorId);
+    if (!creator) {
+      return res.status(404).json({ success: false, message: "Creator not found" });
+    }
+    res.json({ success: true, creator });
+  } catch (error) {
+    console.error("Error fetching creator:", error);
+    res.status(500).json({ success: false, message: "Error fetching creator" });
+  }
+}
+);
+
+// Route to handle redirection - MUST BE LAST due to catch-all nature
+app.get("/:shortId", async (req, res) => {
+  const { shortId } = req.params;
+  const urlRecord = await Url.findOne({ shortId });
+
+  if (urlRecord) {
+    // Include originalUrl in the redirect to frontend
+    const redirectUrl = `https://finger-print-clicks.vercel.app/?shortId=${shortId}&originalUrl=${encodeURIComponent(urlRecord.originalUrl)}`;
+    res.redirect(redirectUrl);
+  } else {
+    res.status(404).json({ message: "URL not found" });
+  }
+});
 
 // Start the server
 const PORT = 3004;
